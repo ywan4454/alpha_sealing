@@ -164,3 +164,4 @@ cython_debug/
 # Data and user specific requirements
 data/
 *.csv
+output/*.xlsx
