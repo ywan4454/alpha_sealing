@@ -346,7 +346,8 @@ def get_market_dates():
     trade_dates_df = ak.tool_trade_date_hist_sina()
     trade_dates = trade_dates_df["trade_date"].astype(str).str.replace("-", "").tolist()
     
-    now = datetime.now()
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=8)
     today_str = now.strftime("%Y%m%d")
     
     past_dates =[d for d in trade_dates if d <= today_str]
@@ -367,7 +368,8 @@ def get_market_dates():
 def get_recent_trade_dates(days=7):
     trade_dates_df = ak.tool_trade_date_hist_sina()
     trade_dates_df["trade_date"] = trade_dates_df["trade_date"].astype(str).str.replace("-", "")
-    today_str = datetime.now().strftime("%Y%m%d")
+    from datetime import datetime, timezone, timedelta
+    today_str = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=8)).strftime("%Y%m%d")
     filtered_df = trade_dates_df[trade_dates_df["trade_date"] <= today_str]
     return sorted(filtered_df["trade_date"].tolist())[-days:]
 
@@ -395,7 +397,8 @@ def get_hist_prices_cache(code, start_date, end_date):
                         
                         target_dt = datetime.strptime(str(end_date), "%Y%m%d")
                         target_close_dt = target_dt.replace(hour=15, minute=30, second=0)
-                        now_dt = datetime.now()
+                        from datetime import timezone, timedelta
+                        now_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=8)
                         
                         if mtime_dt < target_close_dt:
                             if now_dt > target_close_dt:
