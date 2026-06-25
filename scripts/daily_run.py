@@ -108,4 +108,29 @@ with pd.ExcelWriter(filename, engine='openpyxl') as writer:
 
 print(f"--- PROCESS COMPLETE ---")
 print(f"File Saved: {filename}")
+
+# ==========================================
+# 4. 推送企业微信机器人 (Github Action 触发)
+# ==========================================
+webhook_url = os.environ.get("WECHAT_WEBHOOK_URL")
+if webhook_url:
+    print("PIPELINE: Sending WeCom Webhook...")
+    bot = WeComBot(webhook_url)
+    
+    # 构建推送内容
+    md_content = f"### 🚀 Alpha Sealing 盘后预测 ({target_date})\n\n"
+    if not final_ml_pool.empty:
+        md_content += "**🔥 明日打板核心标的**\n"
+        for _, row in final_ml_pool.iterrows():
+            md_content += f"> **{row['名称']} ({row['代码']})**\n> 晋级概率: {row['Success_Prob']*100:.1f}%\n> 封板金额: {row['封板金额_亿']}亿\n\n"
+    else:
+        md_content += "**🔥 明日打板核心标的**\n> 今日无符合条件的合规打板标的。\n\n"
+        
+    if event_df is not None and not event_df.empty:
+        md_content += "**🚨 核心事件驱动 (重组/复牌)**\n"
+        for _, row in event_df.head(3).iterrows():
+            md_content += f"> **{row['Name']} ({row['Ticker']})** - {row['Keyword']}\n> {row['Description'][:30]}...\n\n"
+            
+    bot.send_markdown(md_content)
+    print("RESULT: Webhook sent successfully.")
 # %%

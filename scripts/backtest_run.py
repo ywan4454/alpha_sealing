@@ -3,7 +3,10 @@ import pandas as pd
 import akshare as ak
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from datetime import datetime
+from datetime import datetime, timedelta
+import glob
+import time
+import yfinance as yf
 import glob
 import time
 
@@ -15,6 +18,35 @@ def get_trade_dates():
     trade_dates_df = ak.tool_trade_date_hist_sina()
     return trade_dates_df["trade_date"].astype(str).str.replace("-", "").tolist()
 
+def get_yfinance_hist_backtest(code_str, start_date_str, end_date_str):
+    if code_str.startswith(('60', '68')):
+        yf_ticker = f"{code_str}.SS"
+    else:
+        yf_ticker = f"{code_str}.SZ"
+        
+    try:
+        start_dt = datetime.strptime(start_date_str, "%Y%m%d").strftime("%Y-%m-%d")
+        end_dt_obj = datetime.strptime(end_date_str, "%Y%m%d") + timedelta(days=1)
+        end_dt = end_dt_obj.strftime("%Y-%m-%d")
+        
+        ticker = yf.Ticker(yf_ticker)
+        df_yf = ticker.history(start=start_dt, end=end_dt, auto_adjust=False)
+        
+        if df_yf.empty:
+            return None
+            
+        df_yf = df_yf.reset_index()
+        df = pd.DataFrame()
+        df['date_key'] = df_yf['Date'].dt.strftime('%Y%m%d')
+        df['开盘'] = df_yf['Open']
+        df['收盘'] = df_yf['Close']
+        df['最高'] = df_yf['High']
+        df['最低'] = df_yf['Low']
+        
+        return df
+    except Exception as e:
+        return None
+
 def evaluate_trade_strict(code, t_date, t1_date, t2_date):
     """
     统一的回测评估引擎 (严格不复权 + Decimal涨停价计算)
@@ -23,12 +55,12 @@ def evaluate_trade_strict(code, t_date, t1_date, t2_date):
     """
     code_str = str(code).zfill(6)
     
-    # 获取区间内严格不复权数据 (包含 T日, T+1日, T+2日)
-    df = get_hist_prices_backtest_cache(code_str, t_date, t2_date)
+    # 获取区间内严格不复权数据 (使用 yfinance)
+    df = get_yfinance_hist_backtest(code_str, t_date, t2_date)
     if df is None or df.empty:
-        return {"status": "error", "reason": "无法获取K线数据"}
+        return {"status": "error", "reason": "无法获取K线数据(yfinance)"}
 
-    df['date_key'] = df['日期'].astype(str).str.replace("-", "")
+    # date_key is already formatted inside get_yfinance_hist_backtest
     
     t_row = df[df['date_key'] == t_date]
     t1_row = df[df['date_key'] == t1_date]
@@ -42,16 +74,14 @@ def evaluate_trade_strict(code, t_date, t1_date, t2_date):
     buy_open = float(t1_row['开盘'].iloc[0])
     buy_high = float(t1_row['最高'].iloc[0])
 
-    # 1. 计算理论涨停价
-    strict_limit_price = calculate_strict_limit_up(prev_close, code_str)
-    
-    # 2. 开盘价判定
-    if buy_open < (strict_limit_price - 0.01):
-        return {"status": "cancelled", "reason": f"开盘未涨停(开盘:{buy_open:.2f}, 应为:{strict_limit_price:.2f})"}
+    # 2. 开盘价判定 (只要涨幅达到9%以上就算涨停)
+    if buy_open < (prev_close * 1.09):
+        return {"status": "cancelled", "reason": f"开盘未涨停(开盘:{buy_open:.2f}, 昨收:{prev_close:.2f})"}
         
-    # 3. 封死判定
-    if buy_open < (buy_high - 0.01):
-        return {"status": "cancelled", "reason": f"开盘未封死被砸(开盘:{buy_open:.2f}, 最高:{buy_high:.2f})"}
+    # 3. 封死判定 (一字封死意味着全天最低价和开盘价一致)
+    buy_low = float(t1_row['最低'].iloc[0])
+    if buy_low < (buy_open - 0.01):
+        return {"status": "cancelled", "reason": f"开盘未封死被砸(开盘:{buy_open:.2f}, 最低:{buy_low:.2f})"}
 
     # T+2 卖出
     if t2_row.empty:

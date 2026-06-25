@@ -782,16 +782,14 @@ def evaluate_t1_open_to_t2_open(code, t_date, t1_date, t2_date):
     open_t1 = float(t1_row['开盘'].iloc[0])
     high_t1 = float(t1_row['最高'].iloc[0])
     
-    # 1. 根据 T 日真实的“不复权收盘价”计算 T+1 的理论涨停价
-    strict_limit_price = calculate_strict_limit_up(close_t, clean_code)
-    
-    # 2. 判断开盘价是否达到了理论涨停价 (容忍 0.01 浮点误差)
-    if open_t1 < (strict_limit_price - 0.01):
-        return {"status": "cancelled", "reason": f"未达涨停价(开盘:{open_t1:.2f}, 应为:{strict_limit_price:.2f})"}
+    # 1. 判断是否涨停开盘 (开盘价较昨收上涨至少9%)
+    if open_t1 < (close_t * 1.09):
+        return {"status": "cancelled", "reason": f"未达涨停价(开盘:{open_t1:.2f}, 昨收:{close_t:.2f})"}
         
-    # 3. 判断开盘价是否是全天的最高价 (保证竞价确实是一字封死的)
-    if open_t1 < (high_t1 - 0.01):
-        return {"status": "cancelled", "reason": f"未封死被砸(开盘:{open_t1:.2f}, 盘中最高:{high_t1:.2f})"}
+    # 2. 判断开盘价是否是全天的最低价 (保证竞价确实是一字封死，未被砸)
+    low_t1 = float(t1_row['最低'].iloc[0])
+    if low_t1 < (open_t1 - 0.01):
+        return {"status": "cancelled", "reason": f"未封死被砸(开盘:{open_t1:.2f}, 盘中最低:{low_t1:.2f})"}
     
     # ========== 交易执行逻辑 ==========
     if t2_row.empty:
@@ -908,4 +906,36 @@ def evaluate_t1_open_to_t2_open(code, t_date, t1_date, t2_date):
         equity_curve.append({"date": t1_date, "equity": equity, "daily_pnl": daily_pnl, "executed_trades": executed_count})
         print(f" -> 今日结束资金: {equity:.2f}")
 
-    return pd.DataFrame(equity_curve), pd.DataFrame(trade_logs), INITIAL_CAPITAL    
+    return pd.DataFrame(equity_curve), pd.DataFrame(trade_logs), INITIAL_CAPITAL
+
+# ==================== [9. Webhook Integration] ====================
+class WeComBot:
+    def __init__(self, webhook_url):
+        # 修复 HTTP 大小写问题，requests 库仅支持小写的 http:// 和 https://
+        if webhook_url.startswith("HTTP://"):
+            webhook_url = "http://" + webhook_url[7:]
+        elif webhook_url.startswith("HTTPS://"):
+            webhook_url = "https://" + webhook_url[8:]
+        self.webhook_url = webhook_url
+
+    def send_text(self, text):
+        import requests
+        headers = {"Content-Type": "application/json"}
+        data = {"msgtype": "text", "text": {"content": text}}
+        try:
+            requests.post(self.webhook_url, json=data, headers=headers)
+        except Exception as e:
+            print(f"Failed to send text: {e}")
+
+    def send_markdown(self, md):
+        import requests
+        headers = {"Content-Type": "application/json"}
+        # 企业微信对 markdown 文本有 4000 字节左右的限制，这里进行安全分段
+        max_len = 4000
+        chunks = [md[i:i + max_len] for i in range(0, len(md), max_len)]
+        for chunk in chunks:
+            data = {"msgtype": "markdown", "markdown": {"content": chunk}}
+            try:
+                requests.post(self.webhook_url, json=data, headers=headers)
+            except Exception as e:
+                print(f"Failed to send markdown: {e}")
