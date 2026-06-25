@@ -94,6 +94,7 @@ else:
     ml_export = pd.DataFrame(columns=["Ticker", "Name", "ML_Success_Prob", "Limit_Height", "Market_Cap", "Sealing_Amt", "Is_One_Word_Board", "Sector"])
 
 filename = os.path.join(PROJECT_ROOT, 'output', f"明日_{target_date}.xlsx")
+os.makedirs(os.path.dirname(filename), exist_ok=True)
 with pd.ExcelWriter(filename, engine='openpyxl') as writer:
     if not ml_export.empty:
         ml_export.to_excel(writer, sheet_name='ML_Momentum_Pool', index=False)

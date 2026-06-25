@@ -252,6 +252,7 @@ def main():
 
     # 导出日志
     out_file = os.path.join(PROJECT_ROOT, 'output', f"回测综合详单_{today_str}.xlsx")
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
     df_logs.to_excel(out_file, index=False)
     print(f"\n✅ 综合回测详单已保存: {out_file}")
 

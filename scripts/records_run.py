@@ -95,6 +95,7 @@ def generate_pro_master_report():
 
         # 6. 导出
         output_name = os.path.join(PROJECT_ROOT, 'output', f"Alpha_Strategy_Records_v{datetime.now().strftime('%m%d')}.xlsx")
+        os.makedirs(os.path.dirname(output_name), exist_ok=True)
         final_report.to_excel(output_name, index=False)
         
         print("\n" + "="*50)
