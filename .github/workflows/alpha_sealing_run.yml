@@ -25,6 +25,14 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           
+      - name: Cache K-line Data
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: ${{ runner.os }}-quant-data-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-quant-data-
+            
       - name: Run daily prediction
         env:
           WECHAT_WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
