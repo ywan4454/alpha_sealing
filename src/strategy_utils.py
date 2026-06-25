@@ -939,3 +939,36 @@ class WeComBot:
                 requests.post(self.webhook_url, json=data, headers=headers)
             except Exception as e:
                 print(f"Failed to send markdown: {e}")
+
+    def send_file(self, file_path):
+        import requests
+        import os
+        
+        if not os.path.exists(file_path):
+            print(f"File not found: {file_path}")
+            return
+            
+        # 构建企微上传临时素材的 URL
+        upload_url = self.webhook_url.replace("webhook/send?", "webhook/upload_media?type=file&")
+        
+        try:
+            with open(file_path, "rb") as f:
+                # 1. 上传文件获取 media_id
+                # 必须指定 filename 和 file-like object
+                files = {"media": (os.path.basename(file_path), f)}
+                upload_res = requests.post(upload_url, files=files).json()
+                
+                if upload_res.get("errcode") == 0:
+                    media_id = upload_res.get("media_id")
+                    
+                    # 2. 推送文件消息
+                    data = {
+                        "msgtype": "file",
+                        "file": {"media_id": media_id}
+                    }
+                    requests.post(self.webhook_url, json=data)
+                    print(f"File {os.path.basename(file_path)} sent successfully.")
+                else:
+                    print(f"Failed to upload media: {upload_res}")
+        except Exception as e:
+            print(f"Failed to send file: {e}")

@@ -132,5 +132,10 @@ if webhook_url:
             md_content += f"> **{row['Name']} ({row['Ticker']})** - {row['Keyword']}\n> {row['Description'][:30]}...\n\n"
             
     bot.send_markdown(md_content)
+    
+    # 额外推送 Excel 附件供转发给客户
+    print("PIPELINE: Sending Excel file...")
+    bot.send_file(filename)
+    
     print("RESULT: Webhook sent successfully.")
 # %%
