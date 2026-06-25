@@ -9,8 +9,13 @@ import time
 import yfinance as yf
 import glob
 import time
+import yfinance as yf
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+try:
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+except NameError:
+    # 兼容 VSCode 交互式窗口 (Run Cell) 模式
+    PROJECT_ROOT = os.path.abspath(os.getcwd())
 sys.path.append(PROJECT_ROOT)
 from src.strategy_utils import calculate_strict_limit_up, get_hist_prices_backtest_cache, get_recent_trade_dates
 

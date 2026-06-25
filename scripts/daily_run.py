@@ -6,7 +6,11 @@ import akshare as ak
 import pandas as pd
 from datetime import datetime
 import sys, os
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+try:
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+except NameError:
+    # 兼容 VSCode 交互式窗口 (Run Cell) 模式
+    PROJECT_ROOT = os.path.abspath(os.getcwd())
 sys.path.append(PROJECT_ROOT)
 from src.strategy_utils import *
 
