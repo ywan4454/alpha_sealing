@@ -1,0 +1,8 @@
+pandas>=2.0.0
+akshare
+scikit-learn
+matplotlib
+yfinance
+bayesian-optimization
+requests
+openpyxl>=3.1.0
