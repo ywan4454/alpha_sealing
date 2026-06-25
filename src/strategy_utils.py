@@ -45,8 +45,7 @@ def get_event_driven_pool(t_date_str, target_trade_date_str):
     # 盘中运行(如周四)：只扫周四的公告。
     # 周末运行(如周日)：扫周六、周日、周一的公告，完美避开多余历史。
     # =========================================================
-    # 修正：必须包含 T_date（今天），因为盘后的公告（如 18:37）是记录在今天的！
-    start_dt = datetime.strptime(t_date_str, "%Y%m%d")
+    start_dt = datetime.strptime(t_date_str, "%Y%m%d") + timedelta(days=1)
     end_dt = datetime.strptime(target_trade_date_str, "%Y%m%d")
     
     scan_dates = []
