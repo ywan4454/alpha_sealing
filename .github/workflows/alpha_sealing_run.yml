@@ -3,7 +3,8 @@ name: Alpha Sealing Daily Run
 on:
   schedule:
     # 每天 UTC 13:30 执行（即北京时间晚上 21:30），留出半小时给 GitHub 排队
-    - cron: '30 13 * * 1-5'
+    # 执行时间：周日、周一、周二、周三、周四 (0-4)
+    - cron: '30 13 * * 0-4'
   workflow_dispatch: # 允许手动触发
 
 jobs:

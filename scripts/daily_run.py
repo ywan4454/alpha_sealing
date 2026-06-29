@@ -133,7 +133,9 @@ if webhook_url:
         
     if event_df is not None and not event_df.empty:
         md_content += "**🚨 核心事件驱动 (重组/复牌)**\n"
-        for _, row in event_df.head(3).iterrows():
+        # 核心事件去重：同一只股票如果有多条公告，只保留一条，并且发全所有标的
+        unique_events = event_df.drop_duplicates(subset=['Ticker', 'Name'])
+        for _, row in unique_events.iterrows():
             md_content += f"> **{row['Name']} ({row['Ticker']})** - {row['Keyword']}\n> {row['Description'][:30]}...\n\n"
             
     bot.send_markdown(md_content)
